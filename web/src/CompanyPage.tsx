@@ -83,8 +83,8 @@ export function CompanyPage({
           {error}
         </p>
         <p className="note">
-          Fixture only ships ACME. For a live ticker, switch the provider to yahoo in{" "}
-          <a href="#/settings">Settings</a>, then add the name again.
+          ACME is the offline demo. A live ticker fetches Yahoo on first open. If that failed, retry, or set FMP
+          in <a href="#/settings">Settings</a> and Refresh.
         </p>
         <div className="actions">
           <button className="btn" type="button" onClick={() => void refresh()}>

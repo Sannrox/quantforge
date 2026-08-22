@@ -201,8 +201,8 @@ function Home({ items, onAddAcme }: { items: WatchItem[]; onAddAcme: () => Promi
       <p className="kicker">Watchlist</p>
       <h1>Names you are studying</h1>
       <p className="note">
-        Open a name, judge quality and cheapness, write the call. Offline, start with ACME. Live names need Yahoo or
-        FMP in Settings, then Refresh.
+        Open a name, judge quality, cheapness, and survival, write the call. ACME is offline. Any other ticker
+        fetches Yahoo on first open.
       </p>
       {items.length === 0 ? (
         <div className="empty-desk">

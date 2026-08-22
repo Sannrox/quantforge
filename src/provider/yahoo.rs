@@ -1,9 +1,61 @@
+use std::collections::{BTreeMap, HashMap};
+
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::domain::{Financials, Ohlcv, Quote};
 use crate::error::AppError;
+
+const TIMESERIES_START: i64 = 1_483_142_400; // 2016-12-31 UTC; Yahoo still caps depth.
+
+const ANNUAL_TYPES: &[&str] = &[
+    "annualTotalRevenue",
+    "annualNetIncome",
+    "annualOperatingIncome",
+    "annualGrossProfit",
+    "annualEBITDA",
+    "annualNormalizedEBITDA",
+    "annualOperatingCashFlow",
+    "annualCapitalExpenditure",
+    "annualFreeCashFlow",
+    "annualDilutedAverageShares",
+    "annualOrdinarySharesNumber",
+    "annualBasicAverageShares",
+    "annualDilutedEPS",
+    "annualCashCashEquivalentsAndShortTermInvestments",
+    "annualCashAndCashEquivalents",
+    "annualTotalDebt",
+    "annualStockholdersEquity",
+    "annualPretaxIncome",
+    "annualTaxProvision",
+    "annualInterestExpense",
+    "annualInterestExpenseNonOperating",
+];
+
+const QUARTERLY_TYPES: &[&str] = &[
+    "quarterlyTotalRevenue",
+    "quarterlyNetIncome",
+    "quarterlyOperatingIncome",
+    "quarterlyGrossProfit",
+    "quarterlyEBITDA",
+    "quarterlyNormalizedEBITDA",
+    "quarterlyOperatingCashFlow",
+    "quarterlyCapitalExpenditure",
+    "quarterlyFreeCashFlow",
+    "quarterlyDilutedAverageShares",
+    "quarterlyOrdinarySharesNumber",
+    "quarterlyBasicAverageShares",
+    "quarterlyDilutedEPS",
+    "quarterlyCashCashEquivalentsAndShortTermInvestments",
+    "quarterlyCashAndCashEquivalents",
+    "quarterlyTotalDebt",
+    "quarterlyStockholdersEquity",
+    "quarterlyPretaxIncome",
+    "quarterlyTaxProvision",
+    "quarterlyInterestExpense",
+    "quarterlyInterestExpenseNonOperating",
+];
 
 #[derive(Debug, Deserialize)]
 struct ChartResponse {
@@ -25,10 +77,10 @@ struct ChartResult {
 
 #[derive(Debug, Deserialize)]
 struct ChartMeta {
-    #[serde(default)]
-    symbol: Option<String>,
     #[serde(default, rename = "shortName")]
     short_name: Option<String>,
+    #[serde(default, rename = "longName")]
+    long_name: Option<String>,
     #[serde(default, rename = "regularMarketPrice")]
     regular_market_price: Option<f64>,
     #[serde(default, rename = "chartPreviousClose")]
@@ -54,47 +106,64 @@ struct ChartAdj {
     adjclose: Option<Vec<Option<f64>>>,
 }
 
+#[derive(Debug, Deserialize)]
+struct SearchResponse {
+    quotes: Option<Vec<SearchQuote>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchQuote {
+    symbol: Option<String>,
+    #[serde(default, rename = "shortname")]
+    short_name: Option<String>,
+    #[serde(default, rename = "longname")]
+    long_name: Option<String>,
+    #[serde(default)]
+    sector: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct PeriodFacts {
+    currency: String,
+    fields: HashMap<String, f64>,
+}
+
 pub async fn quote(http: &Client, ticker: &str) -> Result<Quote, AppError> {
-    let summary = quote_summary(http, ticker).await.ok();
-    let chart = chart(http, ticker, "1y").await?;
+    let yahoo = yahoo_symbol(ticker);
+    let chart = chart(http, &yahoo, "1y").await?;
     let result = chart_result(&chart)?;
     let price = result
         .meta
         .regular_market_price
         .or(result.meta.chart_previous_close)
         .ok_or_else(|| AppError::Provider(format!("yahoo: no price for {ticker}")))?;
-    let profile = summary
-        .as_ref()
-        .and_then(|value| value.pointer("/quoteSummary/result/0"));
-    let name = profile
-        .and_then(|value| value.pointer("/price/longName").and_then(json_string))
-        .or_else(|| {
-            profile.and_then(|value| value.pointer("/price/shortName").and_then(json_string))
+    let hit = search(http, ticker).await.ok().and_then(|rows| {
+        rows.into_iter().find(|row| {
+            row.symbol.as_deref().is_some_and(|symbol| {
+                symbol.eq_ignore_ascii_case(ticker) || symbol.eq_ignore_ascii_case(&yahoo)
+            })
         })
-        .or_else(|| result.meta.short_name.clone())
-        .unwrap_or_else(|| ticker.to_string());
-    let sector = profile
-        .and_then(|value| value.pointer("/assetProfile/sector").and_then(json_string))
-        .unwrap_or_default();
-    let shares = profile.and_then(|value| {
-        value
-            .pointer("/defaultKeyStatistics/sharesOutstanding/raw")
-            .and_then(json_f64)
     });
-    let market_cap =
-        profile.and_then(|value| value.pointer("/price/marketCap/raw").and_then(json_f64));
+    let name = result
+        .meta
+        .long_name
+        .clone()
+        .or_else(|| result.meta.short_name.clone())
+        .or_else(|| hit.as_ref().and_then(|row| row.long_name.clone()))
+        .or_else(|| hit.as_ref().and_then(|row| row.short_name.clone()))
+        .unwrap_or_else(|| ticker.to_string());
+    let sector = hit
+        .as_ref()
+        .and_then(|row| row.sector.clone())
+        .unwrap_or_default();
     Ok(Quote {
-        ticker: result
-            .meta
-            .symbol
-            .clone()
-            .unwrap_or_else(|| ticker.to_string()),
+        ticker: ticker.to_string(),
         name,
         sector,
         price,
         currency: result.meta.currency.clone().unwrap_or_else(|| "USD".into()),
-        market_cap,
-        shares_outstanding: shares,
+        market_cap: None,
+        shares_outstanding: None,
     })
 }
 
@@ -103,87 +172,26 @@ pub async fn financials(
     ticker: &str,
     annual: bool,
 ) -> Result<Vec<Financials>, AppError> {
-    let summary = quote_summary(http, ticker).await?;
-    let root = summary
-        .pointer("/quoteSummary/result/0")
-        .ok_or_else(|| AppError::Provider(format!("yahoo: no quoteSummary for {ticker}")))?;
-    let income_key = if annual {
-        "incomeStatementHistory"
+    let symbol = yahoo_symbol(ticker);
+    let types = if annual {
+        ANNUAL_TYPES
     } else {
-        "incomeStatementHistoryQuarterly"
+        QUARTERLY_TYPES
     };
-    let cash_key = if annual {
-        "cashflowStatementHistory"
-    } else {
-        "cashflowStatementHistoryQuarterly"
-    };
-    let balance_key = if annual {
-        "balanceSheetHistory"
-    } else {
-        "balanceSheetHistoryQuarterly"
-    };
-    let income = statements(root, income_key, "incomeStatementHistory");
-    let cash = statements(root, cash_key, "cashflowStatements");
-    let balance = statements(root, balance_key, "balanceSheetStatements");
-    if income.is_empty() {
+    let payload = timeseries(http, &symbol, types).await?;
+    let rows = rows_from_timeseries(&payload, annual);
+    if rows.is_empty() {
         return Err(AppError::Provider(format!(
             "yahoo: no {} statements for {ticker}",
             if annual { "annual" } else { "quarterly" }
         )));
     }
-    let mut rows = Vec::new();
-    for item in income {
-        let end = item
-            .get("endDate")
-            .and_then(|value| value.get("fmt"))
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string();
-        let cash_row = find_by_end(&cash, &end);
-        let balance_row = find_by_end(&balance, &end);
-        let revenue = raw(&item, "totalRevenue");
-        let net_income = raw(&item, "netIncome");
-        // Share count only. Income/balance `commonStock` and cash `commonStockIssuance` are dollars.
-        let shares = raw(&item, "dilutedAverageShares");
-        let operating_cf = cash_row.and_then(|row| raw(row, "totalCashFromOperatingActivities"));
-        let capex = cash_row.and_then(|row| raw(row, "capitalExpenditures"));
-        let fcf = match (operating_cf, capex) {
-            (Some(ocf), Some(capex)) => Some(ocf + capex),
-            (Some(ocf), None) => Some(ocf),
-            _ => None,
-        };
-        let eps = raw(&item, "dilutedEPS").or_else(|| match (net_income, shares) {
-            (Some(ni), Some(shares)) if shares.abs() > 0.0 => Some(ni / shares),
-            _ => None,
-        });
-        let fiscal_period = period_label(annual, &end);
-        rows.push(Financials {
-            period_end: end,
-            fiscal_period,
-            currency: "USD".into(), // v1: no FX; Yahoo statement currency is not converted
-            revenue,
-            ebitda: raw(&item, "ebitda").or_else(|| raw(&item, "normalizedEBITDA")),
-            gross_profit: raw(&item, "grossProfit"),
-            operating_income: raw(&item, "operatingIncome"),
-            net_income,
-            operating_cash_flow: operating_cf,
-            free_cash_flow: fcf,
-            eps,
-            shares_outstanding: shares,
-            year_end_price: None,
-            cash: balance_row.and_then(cash_like),
-            debt: balance_row.and_then(interest_bearing_debt),
-            equity: balance_row.and_then(book_equity),
-            pretax_income: raw(&item, "incomeBeforeTax"),
-            tax_expense: raw(&item, "incomeTaxExpense"),
-            interest_expense: interest_expense(&item),
-        });
-    }
     Ok(rows)
 }
 
 pub async fn prices(http: &Client, ticker: &str) -> Result<Vec<Ohlcv>, AppError> {
-    let chart = chart(http, ticker, "max").await?;
+    let symbol = yahoo_symbol(ticker);
+    let chart = chart(http, &symbol, "max").await?;
     let result = chart_result(&chart)?;
     let timestamps = result.timestamp.clone().unwrap_or_default();
     let closes = result
@@ -223,7 +231,7 @@ async fn chart(http: &Client, ticker: &str, range: &str) -> Result<ChartResponse
     let url = format!(
         "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range={range}&interval=1d&events=div"
     );
-    let response = http.get(url).send().await?;
+    let response = yahoo_get(http, &url).await?;
     if !response.status().is_success() {
         return Err(AppError::Provider(format!(
             "yahoo chart {}: {}",
@@ -234,19 +242,42 @@ async fn chart(http: &Client, ticker: &str, range: &str) -> Result<ChartResponse
     Ok(response.json().await?)
 }
 
-async fn quote_summary(http: &Client, ticker: &str) -> Result<Value, AppError> {
-    let url = format!(
-        "https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=assetProfile,price,defaultKeyStatistics,financialData,incomeStatementHistory,incomeStatementHistoryQuarterly,balanceSheetHistory,balanceSheetHistoryQuarterly,cashflowStatementHistory,cashflowStatementHistoryQuarterly"
-    );
-    let response = http.get(url).send().await?;
+async fn search(http: &Client, ticker: &str) -> Result<Vec<SearchQuote>, AppError> {
+    let url = format!("https://query1.finance.yahoo.com/v1/finance/search?q={ticker}");
+    let response = yahoo_get(http, &url).await?;
     if !response.status().is_success() {
         return Err(AppError::Provider(format!(
-            "yahoo quoteSummary {}: {}",
+            "yahoo search {}: {}",
+            ticker,
+            response.status()
+        )));
+    }
+    let body: SearchResponse = response.json().await?;
+    Ok(body.quotes.unwrap_or_default())
+}
+
+async fn timeseries(http: &Client, ticker: &str, types: &[&str]) -> Result<Value, AppError> {
+    let period2 = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_secs() as i64)
+        .unwrap_or(TIMESERIES_START + 1);
+    let url = format!(
+        "https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{ticker}?symbol={ticker}&type={}&period1={TIMESERIES_START}&period2={period2}",
+        types.join(",")
+    );
+    let response = yahoo_get(http, &url).await?;
+    if !response.status().is_success() {
+        return Err(AppError::Provider(format!(
+            "yahoo timeseries {}: {}",
             ticker,
             response.status()
         )));
     }
     Ok(response.json().await?)
+}
+
+async fn yahoo_get(http: &Client, url: &str) -> Result<reqwest::Response, AppError> {
+    Ok(http.get(url).send().await?)
 }
 
 fn chart_result(chart: &ChartResponse) -> Result<&ChartResult, AppError> {
@@ -261,78 +292,117 @@ fn chart_result(chart: &ChartResponse) -> Result<&ChartResult, AppError> {
         .ok_or_else(|| AppError::Provider("yahoo: empty chart".into()))
 }
 
-fn statements<'a>(root: &'a Value, module: &str, list_key: &str) -> Vec<&'a Value> {
-    let Some(module) = root.get(module) else {
+fn rows_from_timeseries(payload: &Value, annual: bool) -> Vec<Financials> {
+    let mut by_date: BTreeMap<String, PeriodFacts> = BTreeMap::new();
+    let Some(results) = payload
+        .pointer("/timeseries/result")
+        .and_then(Value::as_array)
+    else {
         return Vec::new();
     };
-    for key in [
-        list_key,
-        "incomeStatementHistory",
-        "cashflowStatements",
-        "balanceSheetStatements",
-    ] {
-        if let Some(rows) = module.get(key).and_then(Value::as_array) {
-            return rows.iter().collect();
+    for series in results {
+        let Some(full_name) = series.pointer("/meta/type/0").and_then(Value::as_str) else {
+            continue;
+        };
+        let name = unprefixed(full_name);
+        let Some(points) = series.get(full_name).and_then(Value::as_array) else {
+            continue;
+        };
+        for point in points {
+            let Some(end) = point.get("asOfDate").and_then(Value::as_str) else {
+                continue;
+            };
+            let Some(value) = point.pointer("/reportedValue/raw").and_then(json_f64) else {
+                continue;
+            };
+            let facts = by_date.entry(end.to_string()).or_default();
+            if facts.currency.is_empty() {
+                facts.currency = point
+                    .get("currencyCode")
+                    .and_then(Value::as_str)
+                    .unwrap_or("USD")
+                    .to_string();
+            }
+            facts.fields.insert(name.to_string(), value);
         }
     }
-    Vec::new()
+    by_date
+        .into_iter()
+        .rev()
+        .map(|(period_end, facts)| financials_from_facts(period_end, facts, annual))
+        .collect()
 }
 
-fn find_by_end<'a>(rows: &[&'a Value], end: &str) -> Option<&'a Value> {
-    rows.iter().copied().find(|row| {
-        row.get("endDate")
-            .and_then(|value| value.get("fmt"))
-            .and_then(Value::as_str)
-            == Some(end)
-    })
-}
-
-fn raw(row: &Value, field: &str) -> Option<f64> {
-    row.get(field)
-        .and_then(|value| value.get("raw"))
-        .and_then(json_f64)
-}
-
-fn cash_like(row: &Value) -> Option<f64> {
-    raw(row, "cashAndShortTermInvestments")
-        .or_else(|| sum_opt(raw(row, "cash"), raw(row, "shortTermInvestments")))
-        .or_else(|| raw(row, "cash"))
-}
-
-fn interest_expense(row: &Value) -> Option<f64> {
-    raw(row, "interestExpense")
-        .or_else(|| raw(row, "interestExpenseNonOperating"))
-        .map(f64::abs)
-        .filter(|value| *value > 0.0)
-}
-
-fn interest_bearing_debt(row: &Value) -> Option<f64> {
-    raw(row, "totalDebt")
-        .or_else(|| sum_opt(raw(row, "shortLongTermDebt"), raw(row, "longTermDebt")))
-        .or_else(|| raw(row, "longTermDebt"))
-}
-
-fn book_equity(row: &Value) -> Option<f64> {
-    raw(row, "totalStockholderEquity")
-        .or_else(|| raw(row, "totalStockholdersEquity"))
-        .or_else(|| raw(row, "stockholdersEquity"))
-}
-
-fn sum_opt(left: Option<f64>, right: Option<f64>) -> Option<f64> {
-    match (left, right) {
-        (Some(left), Some(right)) => Some(left + right),
-        (Some(left), None) => Some(left),
-        (None, Some(right)) => Some(right),
-        (None, None) => None,
+fn financials_from_facts(period_end: String, facts: PeriodFacts, annual: bool) -> Financials {
+    let operating_cf = first(&facts, &["OperatingCashFlow"]);
+    let capex = first(&facts, &["CapitalExpenditure"]);
+    let fcf = first(&facts, &["FreeCashFlow"]).or_else(|| match (operating_cf, capex) {
+        (Some(ocf), Some(capex)) => Some(ocf + capex),
+        (Some(ocf), None) => Some(ocf),
+        _ => None,
+    });
+    let currency = if facts.currency.is_empty() {
+        "USD".into()
+    } else {
+        facts.currency.clone()
+    };
+    Financials {
+        fiscal_period: period_label(annual, &period_end),
+        currency,
+        revenue: first(&facts, &["TotalRevenue"]),
+        ebitda: first(&facts, &["EBITDA", "NormalizedEBITDA"]),
+        gross_profit: first(&facts, &["GrossProfit"]),
+        operating_income: first(&facts, &["OperatingIncome"]),
+        net_income: first(&facts, &["NetIncome"]),
+        operating_cash_flow: operating_cf,
+        free_cash_flow: fcf,
+        eps: first(&facts, &["DilutedEPS"]),
+        shares_outstanding: first(
+            &facts,
+            &[
+                "DilutedAverageShares",
+                "OrdinarySharesNumber",
+                "BasicAverageShares",
+            ],
+        ),
+        year_end_price: None,
+        cash: first(
+            &facts,
+            &[
+                "CashCashEquivalentsAndShortTermInvestments",
+                "CashAndCashEquivalents",
+            ],
+        ),
+        debt: first(&facts, &["TotalDebt"]),
+        equity: first(&facts, &["StockholdersEquity"]),
+        pretax_income: first(&facts, &["PretaxIncome"]),
+        tax_expense: first(&facts, &["TaxProvision"]),
+        interest_expense: first(&facts, &["InterestExpense", "InterestExpenseNonOperating"])
+            .map(f64::abs)
+            .filter(|value| *value > 0.0),
+        period_end,
     }
+}
+
+fn first(facts: &PeriodFacts, names: &[&str]) -> Option<f64> {
+    names
+        .iter()
+        .find_map(|name| facts.fields.get(*name).copied())
+}
+
+fn unprefixed(key: &str) -> &str {
+    key.strip_prefix("annual")
+        .or_else(|| key.strip_prefix("quarterly"))
+        .or_else(|| key.strip_prefix("trailing"))
+        .unwrap_or(key)
+}
+
+fn yahoo_symbol(ticker: &str) -> String {
+    ticker.replace('.', "-")
 }
 
 fn json_f64(value: &Value) -> Option<f64> {
     value.as_f64().or_else(|| value.as_i64().map(|n| n as f64))
-}
-
-fn json_string(value: &Value) -> Option<String> {
-    value.as_str().map(str::to_string)
 }
 
 fn unix_date(ts: i64) -> String {
@@ -386,24 +456,111 @@ mod tests {
     }
 
     #[test]
-    fn reads_cash_debt_and_equity_aliases() {
-        let row = serde_json::json!({
-            "cash": { "raw": 10.0 },
-            "shortTermInvestments": { "raw": 4.0 },
-            "shortLongTermDebt": { "raw": 3.0 },
-            "longTermDebt": { "raw": 8.0 },
-            "totalStockholderEquity": { "raw": 40.0 }
-        });
-        assert_eq!(cash_like(&row), Some(14.0));
-        assert_eq!(interest_bearing_debt(&row), Some(11.0));
-        assert_eq!(book_equity(&row), Some(40.0));
+    fn class_shares_use_yahoo_hyphen() {
+        assert_eq!(yahoo_symbol("BRK.B"), "BRK-B");
+        assert_eq!(yahoo_symbol("AAPL"), "AAPL");
     }
 
     #[test]
-    fn interest_expense_is_stored_as_a_positive_cost() {
-        let row = serde_json::json!({
-            "interestExpense": { "raw": -120.0 }
+    fn timeseries_builds_statements_and_keeps_interest_as_a_cost() {
+        let payload = serde_json::json!({
+            "timeseries": {
+                "result": [
+                    {
+                        "meta": { "type": ["annualTotalRevenue"] },
+                        "annualTotalRevenue": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "currencyCode": "USD",
+                                "reportedValue": { "raw": 100.0 }
+                            }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualOperatingCashFlow"] },
+                        "annualOperatingCashFlow": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "reportedValue": { "raw": 40.0 }
+                            }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualCapitalExpenditure"] },
+                        "annualCapitalExpenditure": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "reportedValue": { "raw": -8.0 }
+                            }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualInterestExpense"] },
+                        "annualInterestExpense": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "reportedValue": { "raw": -2.5 }
+                            }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualCashCashEquivalentsAndShortTermInvestments"] },
+                        "annualCashCashEquivalentsAndShortTermInvestments": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "reportedValue": { "raw": 12.0 }
+                            }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualTotalDebt"] },
+                        "annualTotalDebt": [
+                            {
+                                "asOfDate": "2024-09-30",
+                                "reportedValue": { "raw": 5.0 }
+                            }
+                        ]
+                    }
+                ]
+            }
         });
-        assert_eq!(interest_expense(&row), Some(120.0));
+        let rows = rows_from_timeseries(&payload, true);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].revenue, Some(100.0));
+        assert_eq!(rows[0].free_cash_flow, Some(32.0));
+        assert_eq!(rows[0].interest_expense, Some(2.5));
+        assert_eq!(rows[0].cash, Some(12.0));
+        assert_eq!(rows[0].debt, Some(5.0));
+        assert_eq!(rows[0].fiscal_period, "FY");
+    }
+
+    #[test]
+    fn prefers_reported_free_cash_flow() {
+        let payload = serde_json::json!({
+            "timeseries": {
+                "result": [
+                    {
+                        "meta": { "type": ["annualOperatingCashFlow"] },
+                        "annualOperatingCashFlow": [
+                            { "asOfDate": "2024-09-30", "reportedValue": { "raw": 40.0 } }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualCapitalExpenditure"] },
+                        "annualCapitalExpenditure": [
+                            { "asOfDate": "2024-09-30", "reportedValue": { "raw": -8.0 } }
+                        ]
+                    },
+                    {
+                        "meta": { "type": ["annualFreeCashFlow"] },
+                        "annualFreeCashFlow": [
+                            { "asOfDate": "2024-09-30", "reportedValue": { "raw": 31.0 } }
+                        ]
+                    }
+                ]
+            }
+        });
+        let rows = rows_from_timeseries(&payload, true);
+        assert_eq!(rows[0].free_cash_flow, Some(31.0));
     }
 }

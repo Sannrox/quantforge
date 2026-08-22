@@ -337,34 +337,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn unknown_fixture_ticker_does_not_stay_on_the_watchlist() {
-        let app = test_app().await;
-        let add = app
-            .clone()
-            .oneshot(
-                Request::post("/api/watchlist")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"ticker":"AAPL"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(add.status(), StatusCode::NOT_FOUND);
-        let bytes = add.into_body().collect().await.unwrap().to_bytes();
-        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let error = body["error"].as_str().unwrap();
-        assert!(error.contains("ACME"));
-        assert!(error.contains("yahoo"));
-        let listed = app
-            .oneshot(Request::get("/api/watchlist").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        let bytes = listed.into_body().collect().await.unwrap().to_bytes();
-        let list: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(list.as_array().unwrap().len(), 0);
-    }
-
-    #[tokio::test]
     async fn company_reports_stale_cache_when_provider_changes() {
         let app = test_app().await;
         let add = app
