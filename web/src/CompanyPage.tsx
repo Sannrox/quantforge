@@ -161,6 +161,14 @@ export function CompanyPage({
           fetch from {company.active_provider}.
         </p>
       ) : null}
+      {company.snapshot.years > 0 &&
+      company.multiples.net_cash == null &&
+      company.snapshot.interest_coverage == null &&
+      company.snapshot.roic == null ? (
+        <p className="banner" role="status">
+          This cache has no balance sheet, so survival and ROIC are blank. Refresh to reload statements.
+        </p>
+      ) : null}
       {company.snapshot.years > 0 && company.snapshot.years < 8 ? (
         <p className="note">
           History uses {company.snapshot.years} years of statements. Yahoo often returns about four; FMP usually
@@ -612,6 +620,7 @@ function DcfPanel({ company, onSaved }: { company: Company; onSaved: (company: C
           <input
             id="dcf-growth"
             value={growth}
+            aria-invalid={error ? true : undefined}
             onChange={(event) => {
               setGrowth(event.target.value);
               setError(null);
@@ -624,6 +633,7 @@ function DcfPanel({ company, onSaved }: { company: Company; onSaved: (company: C
           <input
             id="dcf-return"
             value={ret}
+            aria-invalid={error ? true : undefined}
             onChange={(event) => {
               setRet(event.target.value);
               setError(null);
