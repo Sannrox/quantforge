@@ -772,15 +772,16 @@ function NotesPanel({ company, onSaved }: { company: Company; onSaved: (company:
 
   return (
     <section className="panel">
-      <h2>Note</h2>
+      <h2>Call</h2>
       <form className="dcf-form" onSubmit={(event) => void save(event)}>
         <label className="field" htmlFor="research-note">
-          Thesis
+          Still high quality, cheap enough, and able to survive?
           <textarea
             id="research-note"
             value={body}
             maxLength={4000}
             rows={6}
+            placeholder="Write the call. It stays on the short list."
             onChange={(event) => {
               setBody(event.target.value);
               setSaved(false);
@@ -788,7 +789,7 @@ function NotesPanel({ company, onSaved }: { company: Company; onSaved: (company:
           />
         </label>
         <button className="btn" type="submit">
-          Save note
+          Save call
         </button>
       </form>
       {saved ? (

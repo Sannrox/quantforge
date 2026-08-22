@@ -14,8 +14,11 @@ export type WatchItem = {
   revenue_cagr: number | null;
   revenue_cagr_5y: number | null;
   revenue_cagr_fade: number | null;
+  fcf_ps_cagr: number | null;
   fcf_yield: number | null;
   fcf_yield_ev: number | null;
+  interest_coverage: number | null;
+  net_cash: number | null;
   fcf_yield_vs_median: number | null;
   fcf_conversion: number | null;
   fcf_yield_vs_hurdle: number | null;

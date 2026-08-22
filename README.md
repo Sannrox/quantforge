@@ -25,7 +25,7 @@ Open [http://127.0.0.1:4177](http://127.0.0.1:4177). The host listens on
 `127.0.0.1:4176` and refuses non-loopback binds.
 
 1. Click **Add ACME** for the offline fixture (12 years of statements, no
-   network). Judge quality, cheapness, and survival, write a note, save a DCF.
+   network). Judge quality, cheapness, and survival, write the call, save a DCF.
 2. Add any live ticker. While Settings is still `fixture`, first open fetches
    Yahoo. Switch to `fmp` in Settings when you want a longer statement history,
    then Refresh.
