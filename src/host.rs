@@ -208,6 +208,8 @@ mod tests {
         let bytes = company.into_body().collect().await.unwrap().to_bytes();
         let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["ticker"], "ACME");
+        assert_eq!(body["provider"], "fixture");
+        assert_eq!(body["active_provider"], "fixture");
         assert!(body["annual"].as_array().unwrap().len() >= 10);
         assert!(body["series"]["revenue"].as_array().unwrap().len() >= 10);
         assert!(body["dcf"]["fair_value"].as_f64().unwrap() > 0.0);
@@ -329,6 +331,74 @@ mod tests {
         let body: serde_json::Value = serde_json::from_str(&text).unwrap();
         assert_eq!(body["has_fmp_key"], true);
         assert!(body.get("fmp_key").is_none());
+    }
+
+    #[tokio::test]
+    async fn unknown_fixture_ticker_does_not_stay_on_the_watchlist() {
+        let app = test_app().await;
+        let add = app
+            .clone()
+            .oneshot(
+                Request::post("/api/watchlist")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"ticker":"AAPL"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(add.status(), StatusCode::NOT_FOUND);
+        let bytes = add.into_body().collect().await.unwrap().to_bytes();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let error = body["error"].as_str().unwrap();
+        assert!(error.contains("ACME"));
+        assert!(error.contains("yahoo"));
+        let listed = app
+            .oneshot(Request::get("/api/watchlist").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let bytes = listed.into_body().collect().await.unwrap().to_bytes();
+        let list: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(list.as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn company_reports_stale_cache_when_provider_changes() {
+        let app = test_app().await;
+        let add = app
+            .clone()
+            .oneshot(
+                Request::post("/api/watchlist")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"ticker":"ACME"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(add.status(), StatusCode::OK);
+        let switched = app
+            .clone()
+            .oneshot(
+                Request::put("/api/settings")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"provider":"yahoo"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(switched.status(), StatusCode::OK);
+        let company = app
+            .oneshot(
+                Request::get("/api/companies/ACME")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(company.status(), StatusCode::OK);
+        let bytes = company.into_body().collect().await.unwrap().to_bytes();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["provider"], "fixture");
+        assert_eq!(body["active_provider"], "yahoo");
     }
 
     #[test]

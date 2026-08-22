@@ -18,7 +18,7 @@ fn load(dir: &Path, ticker: &str) -> Result<FixtureFile, AppError> {
     let path = dir.join(format!("{}.json", ticker.to_ascii_lowercase()));
     let bytes = std::fs::read(&path).map_err(|_| {
         AppError::NotFound(format!(
-            "fixture has no data for {ticker}; add {ticker} under testdata/ or switch provider"
+            "fixture has no data for {ticker}. Add ACME for the offline demo, or switch the provider to yahoo in Settings"
         ))
     })?;
     serde_json::from_slice(&bytes).map_err(AppError::from)

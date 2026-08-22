@@ -7,10 +7,12 @@ export function CompanyPage({
   ticker,
   onWatchlist,
   onRemove,
+  onAdd,
 }: {
   ticker: string;
   onWatchlist: () => Promise<void>;
   onRemove: (ticker: string) => Promise<void>;
+  onAdd: (ticker: string) => Promise<void>;
 }) {
   const [company, setCompany] = useState<Company | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,10 +82,19 @@ export function CompanyPage({
         <p className="error" role="alert">
           {error}
         </p>
+        <p className="note">
+          Fixture only ships ACME. For a live ticker, switch the provider to yahoo in{" "}
+          <a href="#/settings">Settings</a>, then add the name again.
+        </p>
         <div className="actions">
           <button className="btn" type="button" onClick={() => void refresh()}>
             Retry
           </button>
+          {ticker !== "ACME" ? (
+            <button className="btn" type="button" onClick={() => void onAdd("ACME")}>
+              Open ACME
+            </button>
+          ) : null}
           <button className="btn btn-quiet" type="button" onClick={() => void onRemove(ticker)}>
             Remove
           </button>
@@ -144,7 +155,23 @@ export function CompanyPage({
           {error}
         </p>
       ) : null}
+      {company.provider !== company.active_provider ? (
+        <p className="banner" role="status">
+          This page is cached from {company.provider}. Active provider is {company.active_provider}. Refresh to
+          fetch from {company.active_provider}.
+        </p>
+      ) : null}
+      {company.snapshot.years > 0 && company.snapshot.years < 8 ? (
+        <p className="note">
+          History uses {company.snapshot.years} years of statements. Yahoo often returns about four; FMP usually
+          has more.
+        </p>
+      ) : null}
       <Judgment company={company} />
+      <div className="split memo">
+        <NotesPanel company={company} onSaved={onCompanySaved} />
+        <DcfPanel company={company} onSaved={onCompanySaved} />
+      </div>
       <History company={company} />
       <div className="tabs" role="tablist" aria-label="Fiscal period" onKeyDown={onTabKey}>
         <button
@@ -182,16 +209,10 @@ export function CompanyPage({
           prices={company.price_series ?? []}
         />
       </div>
-      <div className="split">
-        <section className="panel">
-          <h2 id="statements-heading">{period === "annual" ? "Annual statements" : "Quarterly statements"}</h2>
-          <StatementTable rows={rows} period={period} />
-        </section>
-        <div className="stack">
-          <NotesPanel company={company} onSaved={onCompanySaved} />
-          <DcfPanel company={company} onSaved={onCompanySaved} />
-        </div>
-      </div>
+      <section className="panel">
+        <h2 id="statements-heading">{period === "annual" ? "Annual statements" : "Quarterly statements"}</h2>
+        <StatementTable rows={rows} period={period} />
+      </section>
     </article>
   );
 }

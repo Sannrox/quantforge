@@ -24,8 +24,14 @@ make start
 Open [http://127.0.0.1:4177](http://127.0.0.1:4177). The host listens on
 `127.0.0.1:4176` and refuses non-loopback binds.
 
-Add **ACME** on the watchlist for the offline fixture (12 years of statements,
-no network).
+1. Click **Add ACME** for the offline fixture (12 years of statements, no
+   network). Judge quality and cheapness, write a note, save a DCF.
+2. In Settings, switch the provider to `yahoo` (or `fmp` with a host-side key).
+3. Add a live ticker, then **Refresh**. Cached names stay on the last provider
+   until you do.
+
+Yahoo is unofficial and often returns about four years of statements. That is
+enough for a first pass; it is not a 10-year history.
 
 ## Data providers
 

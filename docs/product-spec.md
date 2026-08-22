@@ -20,16 +20,20 @@ enough to buy or add for a multi-year hold.
    hurdle, and a note excerpt. Extra cheapness fields stay on the company
    payload; they are not a second dashboard.
 2. Company page — identity, price, market cap, net cash and enterprise value;
-   a judgment strip (quality: FCF/sh CAGR, operating margin vs median, ROIC vs
+   a stale-cache banner when the page is from a different provider than Settings;
+   a short-history note when statements cover fewer than eight years; a
+   judgment strip (quality: FCF/sh CAGR, operating margin vs median, ROIC vs
    this company’s history, share change; cheapness: FCF yield and FCF yield on
    EV vs the hurdle, P/FCF vs history, OCF power vs the hurdle, DCF vs price);
-   a History fold for the longer snapshot; 10+ year charts (FCF, ROIC,
-   valuation with P/E, P/FCF, and P/OCF median overlays, shares) plus more
-   charts behind a fold (price, OCF, EPS vs FCF/sh, margins, net cash);
-   annual or quarterly period on charts and statements; single-series levels
-   as columns; hover readout with YoY on single series; statement tables with
-   year-over-year change including operating cash flow, EPS, shares, and FCF
-   margin.
+   the research note and DCF next; a History fold for the longer snapshot;
+   10+ year charts when the provider has them (FCF, ROIC, valuation with P/E,
+   P/FCF, and P/OCF median overlays, shares) plus more charts behind a fold
+   (price, OCF, EPS vs FCF/sh, margins, net cash); annual or quarterly period
+   on charts and statements; single-series levels as columns; hover readout
+   with YoY on single series; statement tables with year-over-year change
+   including operating cash flow, EPS, shares, and FCF margin. An empty
+   watchlist offers ACME. A failed add does not leave a blank name on the
+   list.
 3. DCF — growth and desired return; seed from TTM free cash flow per share,
    falling back to diluted EPS; persist assumptions per ticker; operating
    stream from a 10-year Gordon model; equity fair value is that stream plus
