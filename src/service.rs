@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::domain::{DcfAssumptions, PeriodKind, normalize_ticker};
+use crate::domain::{DcfAssumptions, PeriodKind, newest_first, normalize_ticker};
 use crate::error::AppError;
-use crate::provider::{FetchCtx, ProviderKind, http_client};
+use crate::provider::{FetchCtx, ProviderKind, http_client, resolve_provider};
 use crate::research::{
     Multiples, Point, SeriesSet, Snapshot, StatementRow, current_multiples, price_series,
     quarterly_series, series, snapshot, statements,
@@ -36,6 +36,14 @@ impl AppState {
 
     fn provider(&self) -> Result<ProviderKind, AppError> {
         ProviderKind::parse(&self.store.provider()?)
+    }
+
+    fn fetch_provider(&self, ticker: &str) -> Result<ProviderKind, AppError> {
+        Ok(resolve_provider(
+            self.provider()?,
+            &self.testdata_dir,
+            ticker,
+        ))
     }
 
     pub fn settings(&self) -> Result<SettingsView, AppError> {
@@ -144,10 +152,21 @@ impl AppState {
     }
 
     async fn refresh(&self, ticker: &str) -> Result<(), AppError> {
-        let provider = self.provider()?;
+        let provider = self.fetch_provider(ticker)?;
         let ctx = self.ctx()?;
-        let quote = provider.quote(&ctx, ticker).await?;
+        let mut quote = provider.quote(&ctx, ticker).await?;
         let annual = provider.financials(&ctx, ticker, true).await?;
+        if quote.market_cap.is_none() {
+            if let Some(shares) = newest_first(&annual)
+                .iter()
+                .find_map(|row| row.shares_outstanding.filter(|shares| *shares > 0.0))
+            {
+                quote.shares_outstanding = Some(shares);
+                if quote.price > 0.0 {
+                    quote.market_cap = Some(quote.price * shares);
+                }
+            }
+        }
         // Quarterly is optional. A flake keeps the last same-provider quarters instead of failing the refresh.
         let quarterly = provider.financials(&ctx, ticker, false).await.ok();
         let prices = provider.prices(&ctx, ticker).await?;
@@ -232,7 +251,7 @@ impl AppState {
             price: quote.value.price,
             market_cap: quote.value.market_cap,
             provider: quote.provider,
-            active_provider: self.store.provider()?,
+            active_provider: self.fetch_provider(ticker)?.as_str().to_string(),
             fetched_at: quote.fetched_at,
             multiples,
             snapshot: snap,

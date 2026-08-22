@@ -42,6 +42,20 @@ impl ProviderKind {
     }
 }
 
+/// Fixture is the offline ACME demo. Any other name fetches Yahoo so a first-open
+/// ticker does not require a Settings scavenger hunt.
+pub fn resolve_provider(
+    active: ProviderKind,
+    testdata: &std::path::Path,
+    ticker: &str,
+) -> ProviderKind {
+    if active == ProviderKind::Fixture && !fixture::exists(testdata, ticker) {
+        ProviderKind::Yahoo
+    } else {
+        active
+    }
+}
+
 pub struct FetchCtx {
     pub testdata_dir: PathBuf,
     pub http: Client,
@@ -86,4 +100,38 @@ pub fn http_client() -> Result<Client, AppError> {
         .timeout(Duration::from_secs(30))
         .build()
         .map_err(|error| AppError::Message(format!("http client: {error}")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn testdata() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata")
+    }
+
+    #[test]
+    fn fixture_keeps_acme_offline() {
+        assert_eq!(
+            resolve_provider(ProviderKind::Fixture, &testdata(), "ACME"),
+            ProviderKind::Fixture
+        );
+    }
+
+    #[test]
+    fn fixture_sends_live_names_to_yahoo() {
+        assert_eq!(
+            resolve_provider(ProviderKind::Fixture, &testdata(), "AAPL"),
+            ProviderKind::Yahoo
+        );
+    }
+
+    #[test]
+    fn explicit_yahoo_stays_yahoo_even_for_acme() {
+        assert_eq!(
+            resolve_provider(ProviderKind::Yahoo, &testdata(), "ACME"),
+            ProviderKind::Yahoo
+        );
+    }
 }

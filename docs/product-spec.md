@@ -4,13 +4,15 @@ QuantForge is a local-first research workbench for long-term investors.
 
 ## Outcome
 
-A long-term investor can open a ticker and, in one page, judge quality and
-cheapness from history — then keep a short list of names.
+A long-term investor can open any name they might hold for years and, on one
+local page, decide whether the business is still high quality, cheap enough,
+and able to survive — then write the call and keep a short list — without a
+tape, a broker, or a hosted product.
 
 ## Job
 
-Show, in clean charts, whether a business is still high quality and cheap
-enough to buy or add for a multi-year hold.
+Show, in clean charts, whether a business is still high quality, cheap enough,
+and able to survive a storm — then write the call.
 
 ## Surfaces (v1)
 
@@ -20,20 +22,23 @@ enough to buy or add for a multi-year hold.
    hurdle, and a note excerpt. Extra cheapness fields stay on the company
    payload; they are not a second dashboard.
 2. Company page — identity, price, market cap, net cash and enterprise value;
-   a stale-cache banner when the page is from a different provider than Settings;
+   a stale-cache banner when Refresh would fetch a different provider;
    a short-history note when statements cover fewer than eight years; a
    judgment strip (quality: FCF/sh CAGR, operating margin vs median, ROIC vs
    this company’s history, share change; cheapness: FCF yield and FCF yield on
-   EV vs the hurdle, P/FCF vs history, OCF power vs the hurdle, DCF vs price);
-   the research note and DCF next; a History fold for the longer snapshot;
-   10+ year charts when the provider has them (FCF, ROIC, valuation with P/E,
-   P/FCF, and P/OCF median overlays, shares) plus more charts behind a fold
-   (price, OCF, EPS vs FCF/sh, margins, net cash); annual or quarterly period
-   on charts and statements; single-series levels as columns; hover readout
-   with YoY on single series; statement tables with year-over-year change
-   including operating cash flow, EPS, shares, and FCF margin. An empty
-   watchlist offers ACME. A failed add does not leave a blank name on the
-   list.
+   EV vs the hurdle, P/FCF vs history, DCF vs price; survival: interest cover
+   vs this company’s history, net cash); the research note and DCF next; a
+   History fold for the longer snapshot; 10+ year charts when the provider has
+   them (FCF, ROIC, valuation with P/E, P/FCF, and P/OCF median overlays,
+   shares) plus more charts behind a fold (price, OCF, EPS vs FCF/sh, margins,
+   net cash, interest cover); annual or quarterly period on charts and
+   statements; single-series levels as columns; hover readout with YoY on
+   single series; statement tables with year-over-year change including
+   operating cash flow, EPS, shares, FCF margin, debt, and interest cover. An
+   empty watchlist offers ACME. A live ticker added while Settings is still
+   fixture fetches Yahoo on first open via chart, search, and fundamentals
+   timeseries. A failed add does not leave a blank
+   name on the list.
 3. DCF — growth and desired return; seed from TTM free cash flow per share,
    falling back to diluted EPS; persist assumptions per ticker; operating
    stream from a 10-year Gordon model; equity fair value is that stream plus
@@ -54,7 +59,8 @@ enough to buy or add for a multi-year hold.
    quarter.
 5. Notes — a short research note per ticker, stored on the host.
 6. Settings — active provider (`fixture`, `yahoo`, `fmp`); optional FMP key
-   stored on the host.
+   stored on the host. Fixture is the ACME demo. Other names use Yahoo until
+   you choose Yahoo or FMP for every refresh.
 
 Refresh is explicit or first-open. This is not a live tape.
 

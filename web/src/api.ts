@@ -49,6 +49,7 @@ export type SeriesSet = {
     reinvestment: Point[];
     roic: Point[];
     net_cash: Point[];
+    interest_coverage: Point[];
 };
 
 export type StatementRow = {
@@ -77,6 +78,10 @@ export type StatementRow = {
   operating_margin_yoy: number | null;
   net_margin_yoy: number | null;
   fcf_margin_yoy: number | null;
+  cash: number | null;
+  debt: number | null;
+  interest_expense: number | null;
+  interest_coverage: number | null;
 };
 
 export type Company = {
@@ -191,6 +196,10 @@ export type Company = {
     roic_3y_vs_median: number | null;
     fcf_yield_ev_median: number | null;
     fcf_yield_ev_vs_median: number | null;
+    interest_coverage: number | null;
+    interest_coverage_median: number | null;
+    interest_coverage_vs_median: number | null;
+    interest_coverage_3y: number | null;
   };
   series: SeriesSet;
   quarterly_series: SeriesSet;

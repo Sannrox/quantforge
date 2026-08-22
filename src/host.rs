@@ -256,6 +256,9 @@ mod tests {
         assert!(body["multiples"]["enterprise_value"].as_f64().unwrap() > 0.0);
         assert!(body["multiples"]["fcf_yield_ev"].as_f64().unwrap() > 0.0);
         assert!(body["snapshot"]["roic"].as_f64().unwrap() > 0.0);
+        assert!(body["snapshot"]["interest_coverage"].as_f64().unwrap() > 1.0);
+        assert!(body["annual"][0]["interest_coverage"].as_f64().unwrap() > 1.0);
+        assert!(body["annual"][0]["debt"].as_f64().unwrap() > 0.0);
         assert!(body["series"]["roic"].as_array().unwrap().len() >= 10);
         assert_eq!(body["note"], "");
 
@@ -331,34 +334,6 @@ mod tests {
         let body: serde_json::Value = serde_json::from_str(&text).unwrap();
         assert_eq!(body["has_fmp_key"], true);
         assert!(body.get("fmp_key").is_none());
-    }
-
-    #[tokio::test]
-    async fn unknown_fixture_ticker_does_not_stay_on_the_watchlist() {
-        let app = test_app().await;
-        let add = app
-            .clone()
-            .oneshot(
-                Request::post("/api/watchlist")
-                    .header("content-type", "application/json")
-                    .body(Body::from(r#"{"ticker":"AAPL"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(add.status(), StatusCode::NOT_FOUND);
-        let bytes = add.into_body().collect().await.unwrap().to_bytes();
-        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        let error = body["error"].as_str().unwrap();
-        assert!(error.contains("ACME"));
-        assert!(error.contains("yahoo"));
-        let listed = app
-            .oneshot(Request::get("/api/watchlist").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        let bytes = listed.into_body().collect().await.unwrap().to_bytes();
-        let list: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(list.as_array().unwrap().len(), 0);
     }
 
     #[tokio::test]

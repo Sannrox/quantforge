@@ -27,7 +27,8 @@
       "debt": 25000000000,
       "equity": 112000000000,
       "pretax_income": 29367088608,
-      "tax_expense": 6167088608
+      "tax_expense": 6167088608,
+      "interest_expense": 1000000000.0
     },
     {
       "period_end": "2024-12-31",
@@ -47,7 +48,8 @@
       "debt": 24000000000,
       "equity": 100000000000,
       "pretax_income": 25253164557,
-      "tax_expense": 5303164557
+      "tax_expense": 5303164557,
+      "interest_expense": 960000000.0
     },
     {
       "period_end": "2023-12-31",
@@ -67,7 +69,8 @@
       "debt": 23000000000,
       "equity": 88000000000,
       "pretax_income": 21645569620,
-      "tax_expense": 4545569620
+      "tax_expense": 4545569620,
+      "interest_expense": 920000000.0
     },
     {
       "period_end": "2022-12-31",
@@ -87,7 +90,8 @@
       "debt": 22000000000,
       "equity": 76000000000,
       "pretax_income": 18506329114,
-      "tax_expense": 3886329114
+      "tax_expense": 3886329114,
+      "interest_expense": 880000000.0
     },
     {
       "period_end": "2021-12-31",
@@ -107,7 +111,8 @@
       "debt": 21000000000,
       "equity": 66000000000,
       "pretax_income": 15797468354,
-      "tax_expense": 3317468354
+      "tax_expense": 3317468354,
+      "interest_expense": 840000000.0
     },
     {
       "period_end": "2020-12-31",
@@ -127,7 +132,8 @@
       "debt": 20000000000,
       "equity": 56000000000,
       "pretax_income": 13291139241,
-      "tax_expense": 2791139241
+      "tax_expense": 2791139241,
+      "interest_expense": 800000000.0
     },
     {
       "period_end": "2019-12-31",
@@ -147,7 +153,8 @@
       "debt": 19000000000,
       "equity": 50000000000,
       "pretax_income": 11341772152,
-      "tax_expense": 2381772152
+      "tax_expense": 2381772152,
+      "interest_expense": 760000000.0
     },
     {
       "period_end": "2018-12-31",
@@ -167,7 +174,8 @@
       "debt": 18000000000,
       "equity": 44000000000,
       "pretax_income": 9544303797,
-      "tax_expense": 2004303797
+      "tax_expense": 2004303797,
+      "interest_expense": 720000000.0
     },
     {
       "period_end": "2017-12-31",
@@ -187,7 +195,8 @@
       "debt": 17000000000,
       "equity": 38000000000,
       "pretax_income": 8050632911,
-      "tax_expense": 1690632911
+      "tax_expense": 1690632911,
+      "interest_expense": 680000000.0
     },
     {
       "period_end": "2016-12-31",
@@ -207,7 +216,8 @@
       "debt": 16000000000,
       "equity": 33000000000,
       "pretax_income": 6683544304,
-      "tax_expense": 1403544304
+      "tax_expense": 1403544304,
+      "interest_expense": 640000000.0
     },
     {
       "period_end": "2015-12-31",
@@ -227,7 +237,8 @@
       "debt": 15000000000,
       "equity": 29000000000,
       "pretax_income": 5569620253,
-      "tax_expense": 1169620253
+      "tax_expense": 1169620253,
+      "interest_expense": 600000000.0
     },
     {
       "period_end": "2014-12-31",
@@ -247,7 +258,8 @@
       "debt": 15000000000,
       "equity": 25000000000,
       "pretax_income": 4556962025,
-      "tax_expense": 956962025
+      "tax_expense": 956962025,
+      "interest_expense": 600000000.0
     }
   ],
   "quarterly": [
@@ -268,7 +280,8 @@
       "debt": 25000000000,
       "equity": 112000000000,
       "pretax_income": 7848101266,
-      "tax_expense": 1648101266
+      "tax_expense": 1648101266,
+      "interest_expense": 250000000.0
     },
     {
       "period_end": "2025-09-30",
@@ -287,7 +300,8 @@
       "debt": 25000000000,
       "equity": 109000000000,
       "pretax_income": 7493670886,
-      "tax_expense": 1573670886
+      "tax_expense": 1573670886,
+      "interest_expense": 250000000.0
     },
     {
       "period_end": "2025-06-30",
@@ -306,7 +320,8 @@
       "debt": 24500000000,
       "equity": 106000000000,
       "pretax_income": 7139240506,
-      "tax_expense": 1499240506
+      "tax_expense": 1499240506,
+      "interest_expense": 245000000.0
     },
     {
       "period_end": "2025-03-31",
@@ -325,7 +340,8 @@
       "debt": 24200000000,
       "equity": 103000000000,
       "pretax_income": 6886075949,
-      "tax_expense": 1446075949
+      "tax_expense": 1446075949,
+      "interest_expense": 242000000.0
     },
     {
       "period_end": "2024-12-31",
@@ -344,7 +360,8 @@
       "debt": 24000000000,
       "equity": 100000000000,
       "pretax_income": 6734177215,
-      "tax_expense": 1414177215
+      "tax_expense": 1414177215,
+      "interest_expense": 240000000.0
     },
     {
       "period_end": "2024-09-30",
@@ -363,7 +380,8 @@
       "debt": 23800000000,
       "equity": 97000000000,
       "pretax_income": 6397468354,
-      "tax_expense": 1343468354
+      "tax_expense": 1343468354,
+      "interest_expense": 238000000.0
     },
     {
       "period_end": "2024-06-30",
@@ -382,7 +400,8 @@
       "debt": 23500000000,
       "equity": 94000000000,
       "pretax_income": 6205063291,
-      "tax_expense": 1303063291
+      "tax_expense": 1303063291,
+      "interest_expense": 235000000.0
     },
     {
       "period_end": "2024-03-31",
@@ -401,7 +420,8 @@
       "debt": 23200000000,
       "equity": 91000000000,
       "pretax_income": 5916455696,
-      "tax_expense": 1242455696
+      "tax_expense": 1242455696,
+      "interest_expense": 232000000.0
     }
   ],
   "prices": []

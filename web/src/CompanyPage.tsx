@@ -1,7 +1,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { api, type Company, type Point, type SeriesSet, type StatementRow } from "./api";
 import { Chart } from "./Chart";
-import { compact, fmt, money, pct } from "./format";
+import { compact, fmt, money, pct, times } from "./format";
 
 export function CompanyPage({
   ticker,
@@ -83,8 +83,8 @@ export function CompanyPage({
           {error}
         </p>
         <p className="note">
-          Fixture only ships ACME. For a live ticker, switch the provider to yahoo in{" "}
-          <a href="#/settings">Settings</a>, then add the name again.
+          ACME is the offline demo. A live ticker fetches Yahoo on first open. If that failed, retry, or set FMP
+          in <a href="#/settings">Settings</a> and Refresh.
         </p>
         <div className="actions">
           <button className="btn" type="button" onClick={() => void refresh()}>
@@ -272,18 +272,27 @@ function Judgment({ company }: { company: Company }) {
             </dd>
           </div>
           <div className="stat">
-            <dt>OCF power vs {pct(company.assumptions.desired_return)} hurdle</dt>
-            <dd>
-              {pct(snap.ocf_power)} · {pct(company.ocf_power_vs_hurdle)}
-            </dd>
-          </div>
-          <div className="stat">
             <dt>DCF vs price</dt>
             <dd>
               {company.dcf
                 ? `${money(company.dcf.fair_value, company.currency)} · ${pct(company.dcf.upside)}`
                 : "—"}
             </dd>
+          </div>
+        </dl>
+      </section>
+      <section>
+        <p className="kicker">Survival</p>
+        <dl className="multiples judgment-grid">
+          <div className="stat">
+            <dt>Interest cover vs {snap.years}y median {times(snap.interest_coverage_median)}</dt>
+            <dd>
+              {times(snap.interest_coverage)} · {pct(snap.interest_coverage_vs_median)}
+            </dd>
+          </div>
+          <div className="stat">
+            <dt>Net cash</dt>
+            <dd>{compact(company.multiples.net_cash)}</dd>
           </div>
         </dl>
       </section>
@@ -323,6 +332,10 @@ function History({ company }: { company: Company }) {
     [
       `ROIC vs ${snap.years}y median ${pct(snap.roic_median)}`,
       `${pct(snap.roic)} · ${pct(snap.roic_vs_median)} · 3y ${pct(snap.roic_3y_vs_median)}`,
+    ],
+    [
+      `Interest cover vs ${snap.years}y median ${times(snap.interest_coverage_median)}`,
+      `${times(snap.interest_coverage)} · ${pct(snap.interest_coverage_vs_median)} · 3y ${times(snap.interest_coverage_3y)}`,
     ],
     [
       `Earnings yield vs ${snap.years}y median ${pct(snap.earnings_yield_median)}`,
@@ -462,6 +475,11 @@ function MoreCharts({ set, prices }: { set: SeriesSet; prices: Point[] }) {
             ]}
           />
           <Chart title="Net cash" mode="bars" series={[{ label: "Net cash", points: set.net_cash }]} />
+          <Chart
+            title="Interest cover"
+            kind="ratio"
+            series={[{ label: "EBIT / interest", points: set.interest_coverage }]}
+          />
           <Chart title="Operating cash flow" mode="bars" series={[{ label: "OCF", points: set.ocf }]} />
           <Chart title="FCF / share" mode="bars" series={[{ label: "FCF / sh", points: set.fcf_ps }]} />
           <Chart
@@ -514,6 +532,8 @@ function StatementTable({ rows, period }: { rows: StatementRow[]; period: string
             <th scope="col">Shares</th>
             <th scope="col">Op. margin</th>
             <th scope="col">FCF margin</th>
+            <th scope="col">Debt</th>
+            <th scope="col">Cover</th>
           </tr>
         </thead>
         <tbody>
@@ -538,6 +558,8 @@ function StatementTable({ rows, period }: { rows: StatementRow[]; period: string
                   <span className="yoy"> {pp(row.fcf_margin_yoy)}</span>
                 ) : null}
               </td>
+              <td>{compact(row.debt)}</td>
+              <td>{times(row.interest_coverage)}</td>
             </tr>
           ))}
         </tbody>

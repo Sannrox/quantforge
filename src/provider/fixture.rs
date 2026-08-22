@@ -14,6 +14,11 @@ struct FixtureFile {
     prices: Vec<Ohlcv>,
 }
 
+pub fn exists(dir: &Path, ticker: &str) -> bool {
+    dir.join(format!("{}.json", ticker.to_ascii_lowercase()))
+        .is_file()
+}
+
 fn load(dir: &Path, ticker: &str) -> Result<FixtureFile, AppError> {
     let path = dir.join(format!("{}.json", ticker.to_ascii_lowercase()));
     let bytes = std::fs::read(&path).map_err(|_| {
@@ -88,6 +93,13 @@ mod tests {
 
     fn testdata() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata")
+    }
+
+    #[test]
+    fn exists_for_acme_only() {
+        assert!(exists(&testdata(), "ACME"));
+        assert!(exists(&testdata(), "acme"));
+        assert!(!exists(&testdata(), "AAPL"));
     }
 
     #[test]
