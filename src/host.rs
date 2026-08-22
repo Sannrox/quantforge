@@ -185,6 +185,9 @@ mod tests {
         assert!(list[0]["pe_vs_median"].as_f64().is_some());
         assert!(list[0]["revenue_cagr"].as_f64().unwrap() > 0.0);
         assert!(list[0]["fcf_yield"].as_f64().unwrap() > 0.0);
+        assert!(list[0]["fcf_ps_cagr"].as_f64().unwrap() > 0.0);
+        assert!(list[0]["interest_coverage"].as_f64().unwrap() > 1.0);
+        assert!(list[0]["net_cash"].as_f64().is_some());
         assert!(list[0]["fcf_yield_vs_median"].as_f64().is_some());
         assert!(list[0]["fcf_yield_vs_hurdle"].as_f64().is_some());
         assert!(list[0]["fcf_power_vs_hurdle"].as_f64().is_some());

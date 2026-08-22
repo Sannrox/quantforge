@@ -17,17 +17,17 @@ and able to survive a storm — then write the call.
 ## Surfaces (v1)
 
 1. Watchlist — the rail is navigation: ticker, last price, and one yield line
-   (FCF yield on EV when present). Home is a short table: ticker, price, FCF
-   yield, FCF yield on enterprise value, FCF yield vs the saved desired-return
-   hurdle, and a note excerpt. Extra cheapness fields stay on the company
-   payload; they are not a second dashboard.
+   (FCF yield on EV when present). Home is the short list of calls: ticker,
+   price, quality (FCF/sh CAGR), cheapness (FCF yield vs the saved
+   desired-return hurdle), survival (interest cover), and the written call.
+   Extra fields stay on the company payload; they are not a second dashboard.
 2. Company page — identity, price, market cap, net cash and enterprise value;
    a stale-cache banner when Refresh would fetch a different provider;
    a short-history note when statements cover fewer than eight years; a
    judgment strip (quality: FCF/sh CAGR, operating margin vs median, ROIC vs
    this company’s history, share change; cheapness: FCF yield and FCF yield on
    EV vs the hurdle, P/FCF vs history, DCF vs price; survival: interest cover
-   vs this company’s history, net cash); the research note and DCF next; a
+   vs this company’s history, net cash); the written call and DCF next; a
    History fold for the longer snapshot; 10+ year charts when the provider has
    them (FCF, ROIC, valuation with P/E, P/FCF, and P/OCF median overlays,
    shares) plus more charts behind a fold (price, OCF, EPS vs FCF/sh, margins,
@@ -57,7 +57,8 @@ and able to survive a storm — then write the call.
    consistency including sequential FCF and OCF up-years. Yahoo quarters are
    labeled Q1–Q4 from period-end month so year-over-year compares the same
    quarter.
-5. Notes — a short research note per ticker, stored on the host.
+5. Call — a short written call per ticker, stored on the host, and shown on
+   the short list.
 6. Settings — active provider (`fixture`, `yahoo`, `fmp`); optional FMP key
    stored on the host. Fixture is the ACME demo. Other names use Yahoo until
    you choose Yahoo or FMP for every refresh.

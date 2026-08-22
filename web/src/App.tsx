@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api, type WatchItem } from "./api";
 import { CompanyPage } from "./CompanyPage";
 import { SettingsPage } from "./SettingsPage";
-import { fmt, money, pct } from "./format";
+import { fmt, money, pct, times } from "./format";
 
 type Route = { name: "home" } | { name: "company"; ticker: string } | { name: "settings" };
 
@@ -201,7 +201,7 @@ function Home({ items, onAddAcme }: { items: WatchItem[]; onAddAcme: () => Promi
       <p className="kicker">Watchlist</p>
       <h1>Names you are studying</h1>
       <p className="note">
-        Open a name, judge quality, cheapness, and survival, write the call. ACME is offline. Any other ticker
+        The short list keeps the call next to quality, cheapness, and survival. ACME is offline. Any other ticker
         fetches Yahoo on first open.
       </p>
       {items.length === 0 ? (
@@ -215,15 +215,15 @@ function Home({ items, onAddAcme }: { items: WatchItem[]; onAddAcme: () => Promi
       ) : (
         <div className="table-wrap home-table">
           <table>
-            <caption className="sr-only">Watchlist quality and cheapness</caption>
+            <caption className="sr-only">Watchlist quality, cheapness, survival, and call</caption>
             <thead>
               <tr>
                 <th scope="col">Ticker</th>
                 <th scope="col">Price</th>
-                <th scope="col">FCF yield</th>
-                <th scope="col">FCF yld EV</th>
+                <th scope="col">FCF/sh CAGR</th>
                 <th scope="col">vs hurdle</th>
-                <th scope="col">Note</th>
+                <th scope="col">Cover</th>
+                <th scope="col">Call</th>
               </tr>
             </thead>
             <tbody>
@@ -234,10 +234,10 @@ function Home({ items, onAddAcme }: { items: WatchItem[]; onAddAcme: () => Promi
                     {item.name ? <div className="watch-name">{item.name}</div> : null}
                   </th>
                   <td>{item.price != null ? money(item.price, item.currency) : "—"}</td>
-                  <td>{pct(item.fcf_yield)}</td>
-                  <td>{pct(item.fcf_yield_ev)}</td>
+                  <td>{pct(item.fcf_ps_cagr)}</td>
                   <td>{pct(item.fcf_yield_vs_hurdle)}</td>
-                  <td className="home-note">{item.note || "—"}</td>
+                  <td>{times(item.interest_coverage)}</td>
+                  <td className="home-note">{item.note || "No call yet"}</td>
                 </tr>
               ))}
             </tbody>
