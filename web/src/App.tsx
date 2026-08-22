@@ -26,6 +26,7 @@ export function App() {
   const [route, setRoute] = useState<Route>(readRoute);
   const [watchlist, setWatchlist] = useState<WatchItem[]>([]);
   const [addError, setAddError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     const onHash = () => setRoute(readRoute());
@@ -56,12 +57,15 @@ export function App() {
       return;
     }
     setAddError(null);
+    setAdding(true);
     try {
       setWatchlist(await api.addWatch(trimmed));
       form?.reset();
       window.location.hash = `#/c/${trimmed.toUpperCase()}`;
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Could not add ticker");
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -85,16 +89,13 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <a
+      <button
+        type="button"
         className="skip-link"
-        href="#desk"
-        onClick={(event) => {
-          event.preventDefault();
-          document.getElementById("desk")?.focus();
-        }}
+        onClick={() => document.getElementById("desk")?.focus()}
       >
         Skip to research
-      </a>
+      </button>
       <aside className="rail">
         <a className="brand" href="#/">
           <span className="brand-name">QuantForge</span>
@@ -108,14 +109,17 @@ export function App() {
             autoComplete="off"
             maxLength={16}
             required
+            disabled={adding}
+            aria-invalid={addError ? true : undefined}
+            aria-describedby={addError ? "add-ticker-error" : undefined}
             onChange={() => setAddError(null)}
           />
-          <button className="btn" type="submit">
+          <button className="btn" type="submit" disabled={adding}>
             Add
           </button>
         </form>
         {addError ? (
-          <p className="rail-error" role="alert">
+          <p className="rail-error" role="alert" id="add-ticker-error">
             {addError}
           </p>
         ) : null}
