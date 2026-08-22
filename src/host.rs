@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
+use axum::response::Html;
 use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use tokio::net::TcpListener;
@@ -46,21 +47,36 @@ pub fn router(state: Arc<AppState>, web_dir: Option<PathBuf>) -> Router {
     if let Some(web_dir) = web_dir.filter(|path| path.exists()) {
         app.fallback_service(ServeDir::new(web_dir))
     } else {
-        app
+        app.route("/", get(desk_missing))
     }
 }
 
 pub async fn serve(options: ServeOptions) -> Result<(), AppError> {
     let store = crate::store::Store::open(&options.db)?;
     let state = Arc::new(AppState::new(store, options.testdata)?);
+    let has_desk = options.web_dir.as_ref().is_some_and(|path| path.exists());
     let app = router(state, options.web_dir);
     let addr = SocketAddr::new(options.bind, options.port);
     let listener = TcpListener::bind(addr)
         .await
         .map_err(|error| AppError::Message(format!("bind {addr}: {error}")))?;
+    eprintln!("QuantForge listening on http://{addr}");
+    if !has_desk {
+        eprintln!("Desk not built. Run `make start` from the repo, or open that URL for instructions.");
+    }
     axum::serve(listener, app)
         .await
         .map_err(|error| AppError::Message(format!("serve: {error}")))
+}
+
+async fn desk_missing() -> Html<&'static str> {
+    Html(
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>QuantForge</title></head><body>\
+         <p>QuantForge host is up. The desk is not in this binary.</p>\
+         <p>From the repo: <code>make start</code> then open this same address.</p>\
+         <p>That builds the desk and serves it here. ACME is the offline demo. A live ticker fetches Yahoo on first open.</p>\
+         </body></html>",
+    )
 }
 
 async fn healthz() -> Json<serde_json::Value> {
@@ -158,6 +174,37 @@ mod tests {
         // leak tempdir for test process lifetime
         std::mem::forget(dir);
         router(state, None)
+    }
+
+    #[tokio::test]
+    async fn root_explains_how_to_build_the_desk() {
+        let app = test_app().await;
+        let response = app
+            .oneshot(Request::get("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body = String::from_utf8(bytes.to_vec()).unwrap();
+        assert!(body.contains("make start"));
+        assert!(body.contains("ACME"));
+    }
+
+    #[tokio::test]
+    async fn built_desk_is_served_from_the_host() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("index.html"), "<!doctype html><title>desk</title>")
+            .expect("index");
+        let store = Store::open(&dir.path().join("t.db")).expect("store");
+        let state = Arc::new(AppState::new(store, testdata()).expect("state"));
+        let app = router(state, Some(dir.path().to_path_buf()));
+        let response = app
+            .oneshot(Request::get("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        assert!(String::from_utf8(bytes.to_vec()).unwrap().contains("desk"));
     }
 
     #[tokio::test]

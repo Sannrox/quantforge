@@ -24,6 +24,6 @@ QuantForge is an independently versioned local-first product.
 
 ## Consequences
 
-`make start` works without Keycloak, Aldunis, Chisei, or a paid data key. The
-fixture provider is the offline default. Yahoo is unofficial. FMP needs a
-host-side key.
+`make start` works without Keycloak, Aldunis, Chisei, or a paid data key. It
+builds the desk and serves it from the host on loopback. ACME is compiled in.
+Yahoo is unofficial. FMP needs a host-side key.
