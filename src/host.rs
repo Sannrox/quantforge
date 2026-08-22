@@ -256,6 +256,9 @@ mod tests {
         assert!(body["multiples"]["enterprise_value"].as_f64().unwrap() > 0.0);
         assert!(body["multiples"]["fcf_yield_ev"].as_f64().unwrap() > 0.0);
         assert!(body["snapshot"]["roic"].as_f64().unwrap() > 0.0);
+        assert!(body["snapshot"]["interest_coverage"].as_f64().unwrap() > 1.0);
+        assert!(body["annual"][0]["interest_coverage"].as_f64().unwrap() > 1.0);
+        assert!(body["annual"][0]["debt"].as_f64().unwrap() > 0.0);
         assert!(body["series"]["roic"].as_array().unwrap().len() >= 10);
         assert_eq!(body["note"], "");
 

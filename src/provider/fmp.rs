@@ -35,6 +35,7 @@ struct FmpIncome {
     weighted_average_shs_out_dil: Option<f64>,
     income_before_tax: Option<f64>,
     income_tax_expense: Option<f64>,
+    interest_expense: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -175,6 +176,10 @@ pub async fn financials(
                 equity: balance_row.and_then(|item| item.total_stockholders_equity),
                 pretax_income: row.income_before_tax,
                 tax_expense: row.income_tax_expense,
+                interest_expense: row
+                    .interest_expense
+                    .map(f64::abs)
+                    .filter(|value| *value > 0.0),
             }
         })
         .collect())

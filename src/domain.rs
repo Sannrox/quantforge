@@ -48,6 +48,8 @@ pub struct Financials {
     pub pretax_income: Option<f64>,
     #[serde(default)]
     pub tax_expense: Option<f64>,
+    #[serde(default)]
+    pub interest_expense: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

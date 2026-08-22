@@ -43,6 +43,7 @@ pub struct SeriesSet {
     pub reinvestment: Vec<Point>,
     pub roic: Vec<Point>,
     pub net_cash: Vec<Point>,
+    pub interest_coverage: Vec<Point>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -134,6 +135,10 @@ pub struct Snapshot {
     pub roic_3y_vs_median: Option<f64>,
     pub fcf_yield_ev_median: Option<f64>,
     pub fcf_yield_ev_vs_median: Option<f64>,
+    pub interest_coverage: Option<f64>,
+    pub interest_coverage_median: Option<f64>,
+    pub interest_coverage_vs_median: Option<f64>,
+    pub interest_coverage_3y: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -163,6 +168,10 @@ pub struct StatementRow {
     pub operating_margin_yoy: Option<f64>,
     pub net_margin_yoy: Option<f64>,
     pub fcf_margin_yoy: Option<f64>,
+    pub cash: Option<f64>,
+    pub debt: Option<f64>,
+    pub interest_expense: Option<f64>,
+    pub interest_coverage: Option<f64>,
 }
 
 pub fn ratio(numer: Option<f64>, denom: Option<f64>) -> Option<f64> {
@@ -276,6 +285,10 @@ pub fn statements(rows: &[Financials]) -> Vec<StatementRow> {
                     ratio(row.free_cash_flow, row.revenue),
                     prior.and_then(|row| ratio(row.free_cash_flow, row.revenue)),
                 ),
+                cash: row.cash,
+                debt: row.debt,
+                interest_expense: row.interest_expense,
+                interest_coverage: interest_coverage(row),
             }
         })
         .collect()
@@ -296,6 +309,7 @@ pub fn quarterly_series(
         p_fcf: valued.p_fcf,
         p_ocf: valued.p_ocf,
         roic: valued.roic,
+        interest_coverage: valued.interest_coverage,
         ..prints
     }
 }
@@ -335,6 +349,7 @@ pub fn series(annual: &[Financials], prices: &[Ohlcv]) -> SeriesSet {
         }),
         roic: roic_points(&chronological),
         net_cash: map_points(&chronological, net_cash),
+        interest_coverage: map_points(&chronological, interest_coverage),
     }
 }
 
@@ -436,6 +451,12 @@ pub fn snapshot(
     let roic_3y = mean_last(&set.roic, 3);
     let ev_fcf_yields = invert_positive(&historical_ev_fcf(&annual, &prices));
     let fcf_yield_ev_median = median_of(&ev_fcf_yields);
+    let interest_coverage = ttm
+        .as_ref()
+        .and_then(interest_coverage)
+        .or_else(|| latest_of(&set.interest_coverage));
+    let interest_coverage_median = median_of(&set.interest_coverage);
+    let interest_coverage_3y = mean_last(&set.interest_coverage, 3);
     let revenue_cagr = cagr_of(&set.revenue);
     let revenue_cagr_5y = cagr_last_years(&set.revenue, 5);
     let fcf_cagr = cagr_of(&set.fcf);
@@ -540,6 +561,10 @@ pub fn snapshot(
         roic_3y_vs_median: vs_median(roic_3y, roic_median),
         fcf_yield_ev_median,
         fcf_yield_ev_vs_median: vs_median(multiples.fcf_yield_ev, fcf_yield_ev_median),
+        interest_coverage,
+        interest_coverage_median,
+        interest_coverage_vs_median: vs_median(interest_coverage, interest_coverage_median),
+        interest_coverage_3y,
     }
 }
 
@@ -589,6 +614,12 @@ fn reinvestment_rate(
         (Some(ocf), Some(fcf), Some(revenue)) if revenue.abs() > 0.0 => Some((ocf - fcf) / revenue),
         _ => None,
     }
+}
+
+fn interest_coverage(row: &Financials) -> Option<f64> {
+    let ebit = row.operating_income.filter(|value| *value > 0.0)?;
+    let interest = row.interest_expense.filter(|value| *value > 0.0)?;
+    Some(ebit / interest)
 }
 
 fn net_cash(row: &Financials) -> Option<f64> {
@@ -993,6 +1024,7 @@ fn ttm_window(newest_first: &[Financials]) -> Option<Financials> {
         equity: last.equity,
         pretax_income: sum(|row| row.pretax_income),
         tax_expense: sum(|row| row.tax_expense),
+        interest_expense: sum(|row| row.interest_expense),
     })
 }
 
@@ -1393,6 +1425,7 @@ mod tests {
             cash: Some(10.0),
             debt: Some(5.0),
             equity: Some(40.0),
+            interest_expense: Some(1.0),
             ..Financials::default()
         };
         let latest = Financials {
@@ -1409,6 +1442,7 @@ mod tests {
             cash: Some(20.0),
             debt: Some(8.0),
             equity: Some(80.0),
+            interest_expense: Some(2.0),
             ..Financials::default()
         };
         let annual = [latest, prior];
@@ -1424,5 +1458,8 @@ mod tests {
         assert!((snap.roic.unwrap() - (50.0 * 0.79 / 51.5)).abs() < 1e-9);
         assert!(snap.roic_median.is_some());
         assert!(snap.fcf_yield_ev_median.is_some());
+        assert_eq!(snap.interest_coverage, Some(25.0));
+        assert_eq!(set.interest_coverage[1].value, Some(25.0));
+        assert_eq!(set.interest_coverage[0].value, Some(25.0));
     }
 }

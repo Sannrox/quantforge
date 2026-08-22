@@ -29,6 +29,13 @@ export function money(value: number, currency: string | null): string {
   }
 }
 
+export function times(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
+  }
+  return `${value.toFixed(1)}x`;
+}
+
 export function compact(value: number | null): string {
   if (value == null) {
     return "—";

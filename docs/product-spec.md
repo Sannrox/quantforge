@@ -24,16 +24,17 @@ enough to buy or add for a multi-year hold.
    a short-history note when statements cover fewer than eight years; a
    judgment strip (quality: FCF/sh CAGR, operating margin vs median, ROIC vs
    this company’s history, share change; cheapness: FCF yield and FCF yield on
-   EV vs the hurdle, P/FCF vs history, OCF power vs the hurdle, DCF vs price);
-   the research note and DCF next; a History fold for the longer snapshot;
-   10+ year charts when the provider has them (FCF, ROIC, valuation with P/E,
-   P/FCF, and P/OCF median overlays, shares) plus more charts behind a fold
-   (price, OCF, EPS vs FCF/sh, margins, net cash); annual or quarterly period
-   on charts and statements; single-series levels as columns; hover readout
-   with YoY on single series; statement tables with year-over-year change
-   including operating cash flow, EPS, shares, and FCF margin. An empty
-   watchlist offers ACME. A failed add does not leave a blank name on the
-   list.
+   EV vs the hurdle, P/FCF vs history, DCF vs price; survival: interest cover
+   vs this company’s history, net cash); the research note and DCF next; a
+   History fold for the longer snapshot; 10+ year charts when the provider has
+   them (FCF, ROIC, valuation with P/E, P/FCF, and P/OCF median overlays,
+   shares) plus more charts behind a fold (price, OCF, EPS vs FCF/sh, margins,
+   net cash, interest cover); annual or quarterly period on charts and
+   statements; single-series levels as columns; hover readout with YoY on
+   single series; statement tables with year-over-year change including
+   operating cash flow, EPS, shares, FCF margin, debt, and interest cover. An
+   empty watchlist offers ACME. A failed add does not leave a blank name on
+   the list.
 3. DCF — growth and desired return; seed from TTM free cash flow per share,
    falling back to diluted EPS; persist assumptions per ticker; operating
    stream from a 10-year Gordon model; equity fair value is that stream plus

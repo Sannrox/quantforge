@@ -176,6 +176,7 @@ pub async fn financials(
             equity: balance_row.and_then(book_equity),
             pretax_income: raw(&item, "incomeBeforeTax"),
             tax_expense: raw(&item, "incomeTaxExpense"),
+            interest_expense: interest_expense(&item),
         });
     }
     Ok(rows)
@@ -298,6 +299,13 @@ fn cash_like(row: &Value) -> Option<f64> {
         .or_else(|| raw(row, "cash"))
 }
 
+fn interest_expense(row: &Value) -> Option<f64> {
+    raw(row, "interestExpense")
+        .or_else(|| raw(row, "interestExpenseNonOperating"))
+        .map(f64::abs)
+        .filter(|value| *value > 0.0)
+}
+
 fn interest_bearing_debt(row: &Value) -> Option<f64> {
     raw(row, "totalDebt")
         .or_else(|| sum_opt(raw(row, "shortLongTermDebt"), raw(row, "longTermDebt")))
@@ -389,5 +397,13 @@ mod tests {
         assert_eq!(cash_like(&row), Some(14.0));
         assert_eq!(interest_bearing_debt(&row), Some(11.0));
         assert_eq!(book_equity(&row), Some(40.0));
+    }
+
+    #[test]
+    fn interest_expense_is_stored_as_a_positive_cost() {
+        let row = serde_json::json!({
+            "interestExpense": { "raw": -120.0 }
+        });
+        assert_eq!(interest_expense(&row), Some(120.0));
     }
 }
