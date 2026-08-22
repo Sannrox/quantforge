@@ -2,6 +2,7 @@
 name = "quantforge"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 license = "MIT"
 description = "Local-first research workbench for long-term investors."
 repository = "https://github.com/Sannrox/quantforge"

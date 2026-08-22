@@ -5,6 +5,8 @@ use serde::Deserialize;
 use crate::domain::{Financials, Ohlcv, Quote};
 use crate::error::AppError;
 
+const ACME_JSON: &str = include_str!("../../testdata/acme.json");
+
 #[derive(Debug, Deserialize)]
 struct FixtureFile {
     quote: Quote,
@@ -15,18 +17,26 @@ struct FixtureFile {
 }
 
 pub fn exists(dir: &Path, ticker: &str) -> bool {
-    dir.join(format!("{}.json", ticker.to_ascii_lowercase()))
-        .is_file()
+    ticker.eq_ignore_ascii_case("ACME")
+        || dir
+            .join(format!("{}.json", ticker.to_ascii_lowercase()))
+            .is_file()
 }
 
 fn load(dir: &Path, ticker: &str) -> Result<FixtureFile, AppError> {
     let path = dir.join(format!("{}.json", ticker.to_ascii_lowercase()));
-    let bytes = std::fs::read(&path).map_err(|_| {
-        AppError::NotFound(format!(
-            "fixture has no data for {ticker}. Add ACME for the offline demo, or switch the provider to yahoo in Settings"
-        ))
-    })?;
-    serde_json::from_slice(&bytes).map_err(AppError::from)
+    if path.is_file() {
+        let bytes = std::fs::read(&path).map_err(|error| {
+            AppError::Message(format!("fixture {}: {error}", path.display()))
+        })?;
+        return serde_json::from_slice(&bytes).map_err(AppError::from);
+    }
+    if ticker.eq_ignore_ascii_case("ACME") {
+        return serde_json::from_str(ACME_JSON).map_err(AppError::from);
+    }
+    Err(AppError::NotFound(format!(
+        "fixture has no data for {ticker}. Add ACME for the offline demo, or add a live ticker (Yahoo on first open)"
+    )))
 }
 
 pub fn quote(dir: &Path, ticker: &str) -> Result<Quote, AppError> {
@@ -99,6 +109,7 @@ mod tests {
     fn exists_for_acme_only() {
         assert!(exists(&testdata(), "ACME"));
         assert!(exists(&testdata(), "acme"));
+        assert!(exists(Path::new("/no/such/quantforge-testdata"), "ACME"));
         assert!(!exists(&testdata(), "AAPL"));
     }
 
@@ -111,5 +122,13 @@ mod tests {
         assert!(annual.len() >= 10);
         let prices = prices(&testdata(), "ACME").expect("prices");
         assert!(!prices.is_empty());
+    }
+
+    #[test]
+    fn acme_is_embedded_without_testdata_dir() {
+        let empty = Path::new("/no/such/quantforge-testdata");
+        let quote = quote(empty, "ACME").expect("embedded acme");
+        assert_eq!(quote.ticker, "ACME");
+        assert!(financials(empty, "ACME", true).expect("annual").len() >= 10);
     }
 }

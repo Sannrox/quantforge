@@ -2,47 +2,53 @@
 
 Local-first research workbench for long-term investors.
 
-Open a ticker, read 10+ years of fundamentals and valuation in clean charts,
-run a simple DCF, and keep a short watchlist. The host owns the data. The
-browser never sees provider keys.
+Open any name you might hold for years and, on one local page, decide whether
+the business is still high quality, cheap enough, and able to survive — then
+write the call and keep a short list. The host owns the data. The browser never
+sees provider keys.
 
-**Status:** early / local-only. Not a hosted product. Sekai Chisei projections
-and Aldunis enterprise hosting are reserved and unimplemented.
+**Status:** early / local-only. Not a hosted product.
 
 ## Requirements
 
-- Rust 1.85+ (edition 2024)
-- Node.js for the Vite UI toolchain only
-- No Keycloak, Aldunis, Chisei, or paid data key required
+- [Rust](https://rustup.rs/) 1.85+ (`rustup` installs `stable`)
+- [Node.js](https://nodejs.org/) 20+ (desk build only)
+- No paid data key, Keycloak, or hosted account
 
 ## Quick start
 
 ```sh
+git clone https://github.com/Sannrox/quantforge.git
+cd quantforge
 make start
 ```
 
-Open [http://127.0.0.1:4177](http://127.0.0.1:4177). The host listens on
-`127.0.0.1:4176` and refuses non-loopback binds.
+Open [http://127.0.0.1:4176](http://127.0.0.1:4176). That is the product: the
+host serves the desk. It binds loopback only.
 
-1. Click **Add ACME** for the offline fixture (12 years of statements, no
-   network). Judge quality, cheapness, and survival, write the call, save a DCF.
-2. Add any live ticker. While Settings is still `fixture`, first open fetches
-   Yahoo. Switch to `fmp` in Settings when you want a longer statement history,
-   then Refresh.
+1. Click **Add ACME** (offline, 12 years of statements, no network). Judge
+   quality, cheapness, and survival, write the call, save a DCF.
+2. Add any live ticker. First open fetches Yahoo. Switch to `fmp` in Settings
+   when you want a longer statement history, then Refresh.
 
 Yahoo is unofficial and often returns about four years of statements. That is
 enough for a first pass; it is not a 10-year history.
+
+```sh
+make check
+```
+
+Desk HMR (optional): `make dev` then [http://127.0.0.1:4177](http://127.0.0.1:4177).
 
 ## Data providers
 
 | Provider | Key | Notes |
 | --- | --- | --- |
-| `fixture` | none | Ships `testdata/acme.json`. Default. |
+| `fixture` | none | ACME is compiled in. Default. |
 | `yahoo` | none | Unofficial Yahoo Finance JSON. May fail or rate-limit. |
 | `fmp` | host-side API key | [Financial Modeling Prep](https://site.financialmodelingprep.com/). The key is stored in local SQLite and is never returned to the browser. |
 
-Switch providers in Settings. Refresh is a button (or first open). This is not
-a live tape.
+Refresh is a button (or first open). This is not a live tape.
 
 ## Layout
 
@@ -57,4 +63,5 @@ SQLite lives at `~/.quantforge/quantforge.db`.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). See [CONTRIBUTING](CONTRIBUTING.md) to work on the
+repo.
