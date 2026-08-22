@@ -369,6 +369,23 @@ h1:focus { outline: none; }
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
   gap: 16px;
 }
+.split.memo {
+  margin: 0 0 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+}
+.banner {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--foreground);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+.empty-desk {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 20px;
+}
 .table-wrap { overflow: auto; max-height: 360px; max-width: 100%; }
 .sensitivity { margin-top: 14px; max-height: none; }
 .sensitivity th, .sensitivity td { font-size: 12px; }

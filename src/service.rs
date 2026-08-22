@@ -70,9 +70,13 @@ impl AppState {
 
     pub async fn add_watch(&self, ticker: &str) -> Result<Vec<WatchItem>, AppError> {
         let ticker = normalize_ticker(ticker).map_err(AppError::BadRequest)?;
+        let had_quote = self.store.quote(&ticker)?.is_some();
         self.store.add_watch(&ticker)?;
-        if self.store.quote(&ticker)?.is_none() {
-            let _ = self.refresh(&ticker).await;
+        if !had_quote {
+            if let Err(error) = self.refresh(&ticker).await {
+                let _ = self.store.remove_watch(&ticker);
+                return Err(error);
+            }
         }
         self.watchlist()
     }
@@ -228,6 +232,7 @@ impl AppState {
             price: quote.value.price,
             market_cap: quote.value.market_cap,
             provider: quote.provider,
+            active_provider: self.store.provider()?,
             fetched_at: quote.fetched_at,
             multiples,
             snapshot: snap,
@@ -300,6 +305,7 @@ impl AppState {
         Ok(WatchItem {
             ticker: ticker.to_string(),
             name: quote.as_ref().map(|row| row.value.name.clone()),
+            provider: quote.as_ref().map(|row| row.provider.clone()),
             price: quote.as_ref().map(|row| row.value.price),
             currency: quote.as_ref().map(|row| row.value.currency.clone()),
             pe: multiples.as_ref().and_then(|row| row.pe),
@@ -351,6 +357,7 @@ pub struct SettingsUpdate {
 pub struct WatchItem {
     pub ticker: String,
     pub name: Option<String>,
+    pub provider: Option<String>,
     pub price: Option<f64>,
     pub currency: Option<String>,
     pub pe: Option<f64>,
@@ -395,6 +402,7 @@ pub struct CompanyView {
     pub price: f64,
     pub market_cap: Option<f64>,
     pub provider: String,
+    pub active_provider: String,
     pub fetched_at: String,
     pub multiples: Multiples,
     pub snapshot: Snapshot,

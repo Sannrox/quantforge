@@ -45,26 +45,31 @@ export function App() {
     reloadWatch().catch((err: Error) => setAddError(err.message));
   }, [reloadWatch]);
 
-  async function addTicker(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const ticker = String(new FormData(form).get("ticker") ?? "").trim();
-    if (!ticker) {
+  async function addTicker(ticker: string, form?: HTMLFormElement) {
+    const trimmed = ticker.trim();
+    if (!trimmed) {
       setAddError("Enter a ticker.");
       return;
     }
-    if (ticker.length > 16 || !/^[A-Za-z0-9.-]+$/.test(ticker) || /^[.-]+$/.test(ticker)) {
+    if (trimmed.length > 16 || !/^[A-Za-z0-9.-]+$/.test(trimmed) || /^[.-]+$/.test(trimmed)) {
       setAddError("Ticker must be 1–16 letters, digits, '.', or '-'.");
       return;
     }
     setAddError(null);
     try {
-      setWatchlist(await api.addWatch(ticker));
-      form.reset();
-      window.location.hash = `#/c/${ticker.toUpperCase()}`;
+      setWatchlist(await api.addWatch(trimmed));
+      form?.reset();
+      window.location.hash = `#/c/${trimmed.toUpperCase()}`;
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Could not add ticker");
     }
+  }
+
+  async function onAddSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const ticker = String(new FormData(form).get("ticker") ?? "");
+    await addTicker(ticker, form);
   }
 
   async function removeTicker(ticker: string) {
@@ -95,7 +100,7 @@ export function App() {
           <span className="brand-name">QuantForge</span>
           <span className="brand-mark">Research</span>
         </a>
-        <form className="rail-form" onSubmit={(event) => void addTicker(event)}>
+        <form className="rail-form" onSubmit={(event) => void onAddSubmit(event)}>
           <input
             name="ticker"
             aria-label="Add ticker"
@@ -132,6 +137,7 @@ export function App() {
                     <span className="watch-ticker">{item.ticker}</span>
                     <span className="watch-meta">{item.price != null ? money(item.price, item.currency) : "—"}</span>
                     <span className="watch-name">{item.name ?? "No cache yet"}</span>
+                    {item.provider ? <span className="watch-name watch-hint">{item.provider}</span> : null}
                     <span className="watch-meta watch-hint">{watchHint(item)}</span>
                     {item.note ? <span className="watch-name watch-hint">{item.note}</span> : null}
                   </button>
@@ -159,9 +165,14 @@ export function App() {
         {route.name === "settings" ? (
           <SettingsPage />
         ) : route.name === "company" ? (
-          <CompanyPage ticker={route.ticker} onWatchlist={reloadWatch} onRemove={removeTicker} />
+          <CompanyPage
+            ticker={route.ticker}
+            onWatchlist={reloadWatch}
+            onRemove={removeTicker}
+            onAdd={(ticker) => addTicker(ticker)}
+          />
         ) : (
-          <Home items={watchlist} />
+          <Home items={watchlist} onAddAcme={() => addTicker("ACME")} />
         )}
       </main>
     </div>
@@ -184,14 +195,23 @@ function watchHint(item: WatchItem): string {
   return "No history yet";
 }
 
-function Home({ items }: { items: WatchItem[] }) {
+function Home({ items, onAddAcme }: { items: WatchItem[]; onAddAcme: () => Promise<void> }) {
   return (
     <section>
       <p className="kicker">Watchlist</p>
       <h1>Names you are studying</h1>
-      <p className="note">Add a ticker. Offline, use ACME. Yahoo is unofficial; FMP needs a host-side key.</p>
+      <p className="note">
+        Open a name, judge quality and cheapness, write the call. Offline, start with ACME. Live names need Yahoo or
+        FMP in Settings, then Refresh.
+      </p>
       {items.length === 0 ? (
-        <p className="empty">The list is empty.</p>
+        <div className="empty-desk">
+          <p className="empty">The list is empty.</p>
+          <button className="btn" type="button" onClick={() => void onAddAcme()}>
+            Add ACME
+          </button>
+          <p className="note">ACME is the offline fixture: 12 years of statements, no network.</p>
+        </div>
       ) : (
         <div className="table-wrap home-table">
           <table>

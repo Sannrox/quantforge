@@ -1,6 +1,7 @@
 export type WatchItem = {
   ticker: string;
   name: string | null;
+  provider: string | null;
   price: number | null;
   currency: string | null;
   pe: number | null;
@@ -86,6 +87,7 @@ export type Company = {
   price: number;
   market_cap: number | null;
   provider: string;
+  active_provider: string;
   fetched_at: string;
   multiples: {
     pe: number | null;

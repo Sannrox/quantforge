@@ -43,6 +43,7 @@ export function SettingsPage() {
       <h1>Settings</h1>
       <p className="note">
         Provider keys stay on this machine. Settings never return the FMP key. Yahoo is unofficial and may fail.
+        Cached names stay on the last provider until you open them and hit Refresh.
       </p>
       <form className="settings-form" onSubmit={(event) => void save(event)}>
         <label className="field" htmlFor="provider">
@@ -91,7 +92,11 @@ export function SettingsPage() {
           ) : null}
         </div>
       </form>
-      {saved ? <p className="note" role="status">Saved.</p> : null}
+      {saved ? (
+        <p className="note" role="status">
+          Saved. Open a name and Refresh to fetch from {provider}.
+        </p>
+      ) : null}
       {error ? (
         <p className="error" role="alert">
           {error}
